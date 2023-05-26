@@ -3,7 +3,6 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 import pandas
-import scipy
 
 ################################################################################
 # Data Reading Code
@@ -56,6 +55,7 @@ predicted_values = np.zeros(
 )
 for i in range(NUM_TEST_DATA_IMAGES):
     result = session.run(["Plus214_Output_0"], {"Input3": TEST_DATA_IMAGES[i]})
+    # result = session.run(None, {"Input3": TEST_DATA_IMAGES[i]})
     predicted_values[i] = np.argmax(result)
 
 print(f"Accuracy is {np.mean(predicted_values == TEST_DATA_LABELS)}")
@@ -66,42 +66,26 @@ print(f"Accuracy is {np.mean(predicted_values == TEST_DATA_LABELS)}")
 
 # Load in the ONNX model protobuf
 onnx_model = onnx.load(MODEL)
+# breakpoint()
 
-# # Print out the initializers in the graph
-# for initializer in onnx_model.graph.initializer:
-#     print(f"name: {initializer.name}")
-#     print(f"data_type: {initializer.data_type} (i.e., {onnx.helper.tensor_dtype_to_np_dtype(initializer.data_type)})")
-#     print(f"dims: {initializer.dims}")
-#     print()
+weights = onnx.load(MODEL).graph.initializer
+# "Parameter87" = weights[0]
+# breakpoint()
 
 # Modify Nodes
-for initializer in onnx_model.graph.initializer:
-    if initializer.name == "Parameter193":
-        # Dense layer weights (256 x 10)
-        weights = np.array(initializer.float_data).reshape((256, 10))
-        u, s, vh = scipy.sparse.linalg.svds(weights, k=8)
-        initializer.float_data[:] = (u @ np.diag(s) @ vh).reshape((2560,))
-    # if initializer.name == "Parameter87" or initializer.name == "Parameter5":
-    #     weights = np.array(initializer.float_data).reshape(initializer.dims)
-    #     feature_maps, channels, _, _ = weights.shape
-    #     for feature_map in range(feature_maps):
-    #         for channel in range(channels):
-    #             # SVD on the single 5x5 kernel
-    #             assert weights[feature_map][channel].shape == (5, 5)
-    #             u, s, vh = scipy.sparse.linalg.svds(weights[feature_map][channel], k=4)
-    #             print(np.sort(s))
-    #             weights[feature_map][channel] = u @ np.diag(s) @ vh
-    #     # initializer.float_data[:] = np.zeros((np.prod(initializer.dims),))
-    #     initializer.float_data[:] = weights.reshape((np.prod(initializer.dims),))
+# Load the ONNX model
+model = onnx.load(MODEL)
+graph = model.graph
+nodes = graph.node
 
-MODEL2 = "convnets_modified.onnx"
-onnx.save(onnx_model, MODEL2)
+for weight in weights:
+  if weight.name == "Parameter87":
+    # print(weight.float_data)
+    breakpoint()
+    print("before: ")
+    print(weight.dims)
+    weight.float_data = 
 
-new_session = ort.InferenceSession(MODEL2)
 
-for i in range(NUM_TEST_DATA_IMAGES):
-    result = new_session.run(["Plus214_Output_0"], {"Input3": TEST_DATA_IMAGES[i]})
-    # result = session.run(None, {"Input3": TEST_DATA_IMAGES[i]})
-    predicted_values[i] = np.argmax(result)
-
-print(f"New accuracy is {np.mean(predicted_values == TEST_DATA_LABELS)}")
+# Save the modified ONNX model
+# onnx.save(model, "modified_model.onnx")
