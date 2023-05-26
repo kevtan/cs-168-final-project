@@ -1,2 +1,8 @@
-# cs-168-final-project
-CS 168 Final Project
+# CS 168 Final Project
+
+## Team Members
+
+- Jessica Chen
+- Kevin Tan
+- Karen Wang
+- Laura Wu
