@@ -1,3 +1,7 @@
+### Project-Specific ###
+# ImageNet Validation Set
+ILSVRC2012_img_val/
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
