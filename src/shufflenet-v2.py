@@ -109,13 +109,19 @@ if __name__ == "__main__":
         # Get the top-5 predictions.
         top_5_predictions = output.argsort()[-5:][::-1]
 
+        # Convert the top-5 predictions to strings.
+        top_5_prediction_strings = [synsets_alt[str(i)] for i in top_5_predictions]
+
+        # Get the correct label as a string.
+        correct_label = synsets.iloc[validation_labels[i] - 1]["words"]
+
         # Update the inference statistics.
         n_processed += 1
-        if top_5_predictions[0] == validation_labels[i]:
+        if top_5_prediction_strings[0] == correct_label:
             n_correct_top_1 += 1
         else:
             n_incorrect_top_1 += 1
-        if validation_labels[i] in top_5_predictions:
+        if correct_label in top_5_prediction_strings:
             n_correct_top_5 += 1
         else:
             n_incorrect_top_5 += 1
