@@ -78,6 +78,10 @@ if __name__ == "__main__":
         image_filename = f"../ILSVRC2012_img_val/ILSVRC2012_val_{i:08d}.JPEG"
         input_image = Image.open(image_filename)
 
+        # Skip grayscale images.
+        if input_image.mode != "RGB":
+            continue
+
         # Perform preprocessing.
         input_tensor = preprocess(input_image)
 
