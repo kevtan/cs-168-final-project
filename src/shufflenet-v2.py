@@ -68,6 +68,13 @@ if __name__ == "__main__":
         ]
     )
 
+    # Inference statistics.
+    n_processed = 0
+    n_correct_top_1 = 0
+    n_incorrect_top_1 = 0
+    n_correct_top_5 = 0
+    n_incorrect_top_5 = 0
+
     # Loop through the (1-indexed) images.
     for i in range(1, N_IMAGES + 1):
         # Skip blacklisted images.
@@ -93,3 +100,22 @@ if __name__ == "__main__":
 
         # Get the top-5 predictions.
         top_5_predictions = output.argsort()[-5:][::-1]
+
+        # Update the inference statistics.
+        n_processed += 1
+        if top_5_predictions[0] == validation_labels[i]:
+            n_correct_top_1 += 1
+        else:
+            n_incorrect_top_1 += 1
+        if validation_labels[i] in top_5_predictions:
+            n_correct_top_5 += 1
+        else:
+            n_incorrect_top_5 += 1
+    
+    # Print the inference statistics.
+    assert n_processed == n_correct_top_1 + n_incorrect_top_1
+    assert n_processed == n_correct_top_5 + n_incorrect_top_5
+    print(f"n_processed: {n_processed}")
+    print(f"top-1 accuracy: {n_correct_top_1 / n_processed}")
+    print(f"top-5 accuracy: {n_correct_top_5 / n_processed}")
+    
