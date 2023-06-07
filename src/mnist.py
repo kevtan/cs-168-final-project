@@ -1,9 +1,12 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import onnx
 import onnxruntime as ort
 import pandas
 import scipy
+import seaborn as sns
 
 ################################################################################
 # Data Reading Code
@@ -67,42 +70,53 @@ print(f"Accuracy is {np.mean(predicted_values == TEST_DATA_LABELS)}")
 # Load in the ONNX model protobuf
 onnx_model = onnx.load(MODEL)
 
-# # Print out the initializers in the graph
-# for initializer in onnx_model.graph.initializer:
-#     print(f"name: {initializer.name}")
-#     print(f"data_type: {initializer.data_type} (i.e., {onnx.helper.tensor_dtype_to_np_dtype(initializer.data_type)})")
-#     print(f"dims: {initializer.dims}")
-#     print()
+# Reduced ranks for the `fc.weight` initializer.
+K_VALUES = range(1, 10, 1)
 
-# Modify Nodes
-for initializer in onnx_model.graph.initializer:
-    if initializer.name == "Parameter193":
-        # Dense layer weights (256 x 10)
-        weights = np.array(initializer.float_data).reshape((256, 10))
-        u, s, vh = scipy.sparse.linalg.svds(weights, k=8)
-        breakpoint()
-        initializer.float_data[:] = (u @ np.diag(s) @ vh).reshape((2560,))
-    # if initializer.name == "Parameter87" or initializer.name == "Parameter5":
-    #     weights = np.array(initializer.float_data).reshape(initializer.dims)
-    #     feature_maps, channels, _, _ = weights.shape
-    #     for feature_map in range(feature_maps):
-    #         for channel in range(channels):
-    #             # SVD on the single 5x5 kernel
-    #             assert weights[feature_map][channel].shape == (5, 5)
-    #             u, s, vh = scipy.sparse.linalg.svds(weights[feature_map][channel], k=4)
-    #             print(np.sort(s))
-    #             weights[feature_map][channel] = u @ np.diag(s) @ vh
-    #     # initializer.float_data[:] = np.zeros((np.prod(initializer.dims),))
-    #     initializer.float_data[:] = weights.reshape((np.prod(initializer.dims),))
+acc_list = []
 
-MODEL2 = "convnets_modified.onnx"
-onnx.save(onnx_model, MODEL2)
+"""
+for k in K_VALUES:
+    MODIFIED_MODEL = f"../mnist/mnist-modified-{k}.onnx"
+    if not os.path.exists(MODIFIED_MODEL):
+        onnx_model = onnx.load(MODEL)
 
-new_session = ort.InferenceSession(MODEL2)
+        for initializer in onnx_model.graph.initializer:
+            if initializer.name == "Parameter193":
+                # Dense layer weights (256 x 10)
+                weights = np.array(initializer.float_data).reshape((256, 10))
+                u, s, vh = scipy.sparse.linalg.svds(weights, k=k)
+                initializer.float_data[:] = (u @ np.diag(s) @ vh).reshape((2560,))
 
-for i in range(NUM_TEST_DATA_IMAGES):
-    result = new_session.run(["Plus214_Output_0"], {"Input3": TEST_DATA_IMAGES[i]})
-    # result = session.run(None, {"Input3": TEST_DATA_IMAGES[i]})
-    predicted_values[i] = np.argmax(result)
+        onnx.save(onnx_model, MODIFIED_MODEL)
 
-print(f"New accuracy is {np.mean(predicted_values == TEST_DATA_LABELS)}")
+    new_session = ort.InferenceSession(MODIFIED_MODEL)
+
+    for i in range(NUM_TEST_DATA_IMAGES):
+        result = new_session.run(["Plus214_Output_0"], {"Input3": TEST_DATA_IMAGES[i]})
+        # result = session.run(None, {"Input3": TEST_DATA_IMAGES[i]})
+        predicted_values[i] = np.argmax(result)
+
+    acc = np.mean(predicted_values == TEST_DATA_LABELS)
+    acc_list.append(acc)
+    print(f"New accuracy for k = {k}: {acc}")
+
+# Plot the results.
+ax = sns.lineplot(x=K_VALUES, y=acc_list, label="Accuracy")
+for x, y in zip(K_VALUES, acc_list):
+    ax.text(x, y, str(y), ha='center', va='bottom')
+ax.set(title="Accuracy v. Rank")
+ax.set(xlabel="Rank (k)")
+ax.set(ylabel="Accuracy")
+plt.savefig("MNIST_accuracy_vs_rank.png")
+"""
+
+# Calculate space saved 
+for k in K_VALUES:
+    og_number_of_param = 256 * 10
+    new_number_of_param = 256 * k + k + 10 * k
+    number_saved = og_number_of_param - new_number_of_param
+    percent_saved_layer = number_saved / og_number_of_param * 100
+    percent_saved_total = number_saved / 5998 * 100
+    print(f"k = {k}: new number of parameters in this weight:{new_number_of_param}")
+    print(f"Number of parameters saved: {number_saved}, {round(percent_saved_layer, 2)}% of current matrix, {round(percent_saved_total, 2)}% total\n")
