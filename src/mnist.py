@@ -80,6 +80,7 @@ for initializer in onnx_model.graph.initializer:
         # Dense layer weights (256 x 10)
         weights = np.array(initializer.float_data).reshape((256, 10))
         u, s, vh = scipy.sparse.linalg.svds(weights, k=8)
+        breakpoint()
         initializer.float_data[:] = (u @ np.diag(s) @ vh).reshape((2560,))
     # if initializer.name == "Parameter87" or initializer.name == "Parameter5":
     #     weights = np.array(initializer.float_data).reshape(initializer.dims)
